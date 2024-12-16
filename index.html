@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        *, *::before, *::after{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            inset: 0;
+        }
+
+        body{
+            font-family: system-ui;
+        }
+        
+        button, input{
+            padding: .5em;
+        }
+
+        dialog{
+            margin: auto;
+            padding: .5em 1em;
+
+            & #gameQuiz_image{
+                max-width: 350px;
+                aspect-ratio: 1/1;
+            }
+        }
+
+        .answers{
+            display: grid;
+            place-content: center;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        table{
+            th, td{
+                padding: 1em;
+            }
+        }
+
+        #startDialog{
+            gap: 3px;
+            > {
+                display: flex;
+            }
+        }
+
+        #tableScore{
+            max-height: 500px;
+            overflow-y: scroll;
+        }
+        
+    </style>
+</head>
+<body>
+    <dialog id="startDialog" open>
+        <form method="dialog" onsubmit="gameStart()">
+            <input id="nameInput" type="text" placeholder="Enter name" required>
+            <input type="submit" value="Start Game">
+            <button onclick="showTableScore()">Top Scores</button>
+        </form>
+    </dialog>
+
+
+    <dialog id="gameDialog">
+        <h1>Question: <span id="questionText"></span></h1>
+        <img id="gameQuiz_image">
+        <div id="answersContainer" class="answers"></div>
+    </dialog>
+
+    <dialog id="endDialog">
+        <h1 id="finalScore"></h1>
+        <button onclick="location.reload()">Play Again</button>
+    </dialog>
+
+    <dialog id="tableScore">
+        <table border="1">
+        </table>
+        <button onclick="location.reload()">Close</button>
+    </dialog>
+    
+    <script>
+        let fruits;
+        let questionNumber = -1;
+        let currentFruit;
+        let answers;
+        let score = 0;
+        let results; //store variable for scoreboard
+
+        let count = 0;
+        let second = 0;
+        let timer = false;
+        // let finalTimer = `${second}.${count}`;
+
+
+        
+        async function refresh(){
+            let response = await fetch("http://localhost/myquizzer/api/db.php");
+            fruits = await response.json();
+            console.log(fruits);
+
+            fruits.sort(randomizer);
+
+            nextQuestion();
+        }
+
+        function gameStart(){
+            startDialog.close();
+            gameDialog.open = open;
+
+            timer = true;
+            runningHandler();
+            console.log('Start:', count/1000);
+        }
+
+        function nextQuestion(){
+            questionNumber++;
+            if(questionNumber >= fruits.length){
+                gameEnd();
+                return;
+            }
+            questionText.innerHTML = questionNumber + 1;
+
+            currentFruit = fruits.at(questionNumber);
+            gameQuiz_image.src = `./images/${currentFruit.name}.png`;
+
+            generateAnswers();
+
+        }
+
+        function generateAnswers(){
+            answers = Array.from(fruits);
+            answers.splice(4);
+
+            if(!answers.includes(currentFruit)){
+                answers.pop();
+                answers.push(currentFruit);
+            }
+
+            answers.sort(randomizer);
+            answersContainer.innerHTML = '';
+            for (const answer of answers) {
+                answersContainer.innerHTML += `
+                    <button onclick="checkAnswer(${answer.id})">${answer.name}</button>
+                `;
+            }
+        }
+
+        function checkAnswer(id){
+            if(currentFruit.id == id){
+                score++;
+                console.log('the score is', score);
+            }
+            nextQuestion();
+        }
+        
+
+        function randomizer(){
+            return Math.random() - 0.5;
+        }
+
+        function gameEnd(){
+            // alert("Game Over! Your score is " + score);
+            gameDialog.close();
+            endDialog.showModal();
+            finalScore.innerHTML = `Your score is: ${score} / ${fruits.length}`;
+            fetch(`http://localhost/myquizzer/api/save-score.php?name=${nameInput.value}&score=${score}&time=${second}.${count}`);
+
+
+            timer = false;
+            console.log(`End: ${second}.${count}`);
+        }
+
+        async function showTableScore(){
+            startDialog.close();
+            tableScore.open = open;
+
+            let response = await fetch("http://localhost/myquizzer/api/get-results.php");
+            results = await response.json();
+            
+            let table = document.querySelector("table");
+            
+            for (result of results) {
+                console.log(result.name);
+                table.innerHTML += `
+                    <tr>
+                        <th>ID</th>
+                        <th>NAME</th>
+                        <th>SCORE</th>
+                        <th>DATE</th>
+                        <th>TIME</th>
+                    </tr>
+                    <tr>
+                        <td>${result.id}</td>
+                        <td>${result.name}</td>
+                        <td>${result.score}</td>
+                        <td>${result.date}</td>
+                        <td>${result.time}</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        function runningHandler(){
+            if(timer){
+                count++;
+
+                if(count == 100){
+                    second++;
+                    count = 0;
+                }
+            }
+
+            setTimeout(runningHandler, 10);
+        }
+
+
+        refresh();
+    </script>
+</body>
+</html>

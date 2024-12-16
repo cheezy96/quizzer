@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <main>
+        <div id="time">
+            <span class="digit" id="count">00</span>
+        </div>
+        <div id="button">
+            <button onclick="startHandler()">Start</button>
+            <button onclick="stopHandler()">Stop</button>
+        </div>
+    </main>
+
+    <script>
+        let second = 0;
+        let count = 0;
+        let timer = false;
+        
+
+        function startHandler(){
+            timer = true;
+            runningHandler();
+            console.log('Start:', count/1000);
+
+        }
+
+        function runningHandler(){
+            if(timer){
+                count++;
+
+                if(count == 100){
+                    second++;
+                    count=0;
+                }
+            }
+
+            setTimeout(runningHandler, 10);
+        }
+
+        function stopHandler(){
+            timer = false;
+            console.log(`End: ${second}.${count}`);
+        }
+        
+    </script>
+</body>
+</html>

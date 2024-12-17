@@ -37,6 +37,7 @@
         }
 
         table{
+            height: 10px;
             th, td{
                 padding: 1em;
             }
@@ -51,7 +52,10 @@
 
         #tableScore{
             max-height: 500px;
-            overflow-y: scroll;
+
+            > div{
+                padding: 1em;
+            }
         }
         
     </style>
@@ -78,9 +82,13 @@
     </dialog>
 
     <dialog id="tableScore">
-        <table border="1">
-        </table>
-        <button onclick="location.reload()">Close</button>
+        <div style="overflow-y: scroll; max-height: 400px;">
+            <table id="tableID" border="1">
+            </table>
+        </div>
+        <div style="background-color: #eee">
+            <button onclick="location.reload()">Close</button>
+        </div>
     </dialog>
     
     <script>
@@ -89,13 +97,11 @@
         let currentFruit;
         let answers;
         let score = 0;
-        let results; //store variable for scoreboard
+        let results; //store variable for scoreboard datas in db
 
-        let count = 0;
-        let second = 0;
-        let timer = false;
-        // let finalTimer = `${second}.${count}`;
-
+        let startCount;
+        let stopCount;
+        let finalCount = startCount - stopCount;
 
         
         async function refresh(){
@@ -103,7 +109,7 @@
             fruits = await response.json();
             console.log(fruits);
 
-            fruits.sort(randomizer);
+            fruits.sort(() => Math.random() - 0.5);
 
             nextQuestion();
         }
@@ -112,9 +118,9 @@
             startDialog.close();
             gameDialog.open = open;
 
-            timer = true;
-            runningHandler();
-            console.log('Start:', count/1000);
+            n = event.timeStamp / 1000;
+            n.toFixed(2);
+            console.log('start:', n);
         }
 
         function nextQuestion(){
@@ -141,8 +147,9 @@
                 answers.push(currentFruit);
             }
 
-            answers.sort(randomizer);
             answersContainer.innerHTML = '';
+            answers.sort(() =>  Math.random() - 0.5);
+
             for (const answer of answers) {
                 answersContainer.innerHTML += `
                     <button onclick="checkAnswer(${answer.id})">${answer.name}</button>
@@ -159,20 +166,26 @@
         }
         
 
-        function randomizer(){
-            return Math.random() - 0.5;
-        }
+        // function randomizer(){
+        //     return Math.random() - 0.5;
+        // }
 
         function gameEnd(){
             // alert("Game Over! Your score is " + score);
             gameDialog.close();
             endDialog.showModal();
             finalScore.innerHTML = `Your score is: ${score} / ${fruits.length}`;
-            fetch(`http://localhost/myquizzer/api/save-score.php?name=${nameInput.value}&score=${score}&time=${second}.${count}`);
-
-
-            timer = false;
-            console.log(`End: ${second}.${count}`);
+            
+            s = event.timeStamp / 1000;
+            s.toFixed(2);
+            finalCount = s - n;
+            console.log('stop:', s);
+            console.log('results:', finalCount);
+            
+            fetch(`http://localhost/myquizzer/api/save-score.php?name=${nameInput.value}&score=${score}&time=${finalCount}`);
+            // timer = false;
+            // stopTime(event);
+            // console.log(`End: ${second}.${count}`);
         }
 
         async function showTableScore(){
@@ -182,20 +195,18 @@
             let response = await fetch("http://localhost/myquizzer/api/get-results.php");
             results = await response.json();
             
-            let table = document.querySelector("table");
+            // let table = document.querySelector("table");
             
             for (result of results) {
                 console.log(result.name);
-                table.innerHTML += `
+                tableID.innerHTML += `
                     <tr>
-                        <th>ID</th>
                         <th>NAME</th>
                         <th>SCORE</th>
                         <th>DATE</th>
                         <th>TIME</th>
                     </tr>
                     <tr>
-                        <td>${result.id}</td>
                         <td>${result.name}</td>
                         <td>${result.score}</td>
                         <td>${result.date}</td>
@@ -204,22 +215,10 @@
                 `;
             }
         }
-        
-        function runningHandler(){
-            if(timer){
-                count++;
 
-                if(count == 100){
-                    second++;
-                    count = 0;
-                }
-            }
-
-            setTimeout(runningHandler, 10);
-        }
 
 
         refresh();
     </script>
 </body>
-</html>
+</html> 
